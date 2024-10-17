@@ -50,11 +50,7 @@ for index, row in df.iterrows():
         G.add_edge(node_id, start_after_id)
 
 
-print("Successors of A:", list(G.successors(396023545489)))
-print("Predecessors of A:", list(G.predecessors(396023545489)))
-
-
-
+######################## CPLen ########################
 # calculate the t_duration of each node
 for node in G.nodes:
     if 'end_time' in G.nodes[node] and 'start_time' in G.nodes[node]:
@@ -65,13 +61,8 @@ for node in G.nodes:
         print(f"Warning: Node {node} does not have complete time attributes.")
         G.nodes[node]['duration'] = -1  # this is exception
 
-
-
-print(G.nodes[396023545546]['duration'] + G.nodes[396023545489]['duration'] + G.nodes[396023520390]['duration'])
-
 max_duration = 0
 longest_path = []
-
 # traverse all nodes
 for source in G.nodes:
     for target in G.nodes:
@@ -83,4 +74,30 @@ for source in G.nodes:
                     longest_path = path
 
 print("Longest path:", longest_path)
-print("Duration of longest path:", max_duration)
+print("Duration of longest path(CPLen):", max_duration)
+######################## End of CPLen ########################
+
+
+######################## TWork ###############################
+# read csv file
+file_path = 'instance_usage_SAMPLE.csv'
+df = pd.read_csv(file_path)
+# print(df.head(10))
+for index, row in df.iterrows():
+    node_id = row['collection_id']
+    # Update nodes with time information safely
+    if node_id in G:
+        G.nodes[node_id]['cpu_usage'] = row['avg_cpu_usage']
+        G.nodes[node_id]['memory_usage'] = row['avg_memory_usage']
+        # print(G.nodes[node_id])
+
+TWork_CPU = 0
+TWork_MEM = 0
+for node in G.nodes:
+    TWork_CPU += G.nodes[node]['cpu_usage']*G.nodes[node]['duration']
+    TWork_MEM += G.nodes[node]['memory_usage']*G.nodes[node]['duration']
+
+
+TWork = max(TWork_CPU, TWork_MEM)
+print("TWork:", f"{TWork_MEM:.0f}")
+######################## End of TWork ###############################
