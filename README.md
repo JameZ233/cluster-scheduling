@@ -14,7 +14,6 @@ For `CPLen_TWork`
 - numpy
 - pandas
 
-For `Google_clusterdata_analysis_colab.ipynb`, please run in Google Colab environment.
 
 As the cluster data is relatively big, you cannot download all of them, therefore a sample is provided in the repo.
 
@@ -28,5 +27,5 @@ As the cluster data is relatively big, you cannot download all of them, therefor
 
 ## Google Colab Notebook
 
-We also have a Jupyter Notebook `Google_clusterdata_analysis_colab.ipynb`, however you may not able to run it as you need a project-id to gain the access for the google sever.
+We also have a Jupyter Notebook, however you may not able to run it as you need a project-id to gain the access for the google sever.
 
