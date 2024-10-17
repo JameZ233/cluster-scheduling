@@ -13,6 +13,7 @@ For `CPLen_TWork`
 
 - numpy
 - pandas
+- matplotlib
 
 
 As the cluster data is relatively big, you cannot download all of them, therefore a sample is provided in the repo.
