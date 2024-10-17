@@ -101,3 +101,11 @@ for node in G.nodes:
 TWork = max(TWork_CPU, TWork_MEM)
 print("TWork:", f"{TWork_MEM:.0f}")
 ######################## End of TWork ###############################
+
+
+# Graph Visualization
+pos = nx.spring_layout(G)
+plt.figure(figsize=(12, 12))
+nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=500, font_size=4, alpha=0.7)
+plt.title('Graph Visualization')
+plt.show()
