@@ -41,23 +41,30 @@ df = client.query(sql_query).to_dataframe()
 unique_collection_ids = df['collection_id'].dropna().unique()  # Drop any None values and get unique values
 collection_ids_array = np.array(unique_collection_ids)  # Convert to NumPy array
 
-# Convert NumPy array to a tuple of values for SQL IN clause
-collection_ids_tuple = tuple(collection_ids_array)
+batch_size = 500  # Adjust as needed
+collection_ids_array = np.array(unique_collection_ids)  # Convert to array for easy slicing
+results = []
 
-sql_usage = f'''SELECT
-                start_time,
-                end_time,
-                collection_id,
-                machine_id,
-                collection_type,
-                average_usage.cpus AS cpu_usage,
-                average_usage.memory AS memory_usage,
-                assigned_memory
-                FROM `google.com:google-cluster-data`.clusterdata_2019_a.instance_usage
-                WHERE collection_id IN {collection_ids_tuple}
-                '''
+# Loop through collection IDs in batches
+for i in range(0, len(collection_ids_array), batch_size):
+    batch_ids = tuple(collection_ids_array[i:i+batch_size])
+    sql_usage = f'''SELECT
+                    start_time,
+                    end_time,
+                    collection_id,
+                    machine_id,
+                    collection_type,
+                    average_usage.cpus AS cpu_usage,
+                    average_usage.memory AS memory_usage,
+                    assigned_memory
+                    FROM `google.com:google-cluster-data`.clusterdata_2019_a.instance_usage
+                    WHERE collection_id IN {batch_ids}
+                    '''
+    query_job = client.query(sql_usage)
+    results.append(query_job.to_dataframe())
 
-df_usage = client.query(sql_usage).to_dataframe()
+# Combine all batch results into a single DataFrame
+df_usage = pd.concat(results, ignore_index=True)
 
 grouped_usage = df_usage.groupby('collection_id').agg({
     'cpu_usage': 'mean',
