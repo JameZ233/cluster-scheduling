@@ -1,5 +1,8 @@
+from venv import create
+
 import pandas as pd
 import networkx as nx
+from collections import deque
 import matplotlib.pyplot as plt
 
 # read csv file
@@ -9,6 +12,30 @@ df = pd.read_csv(file_path)
 # create a new graph
 G = nx.DiGraph()
 
+def create_sample_graph():
+    G = nx.DiGraph()
+    G.add_node("S1", duration = 1, resource = 0.000001, task_num = 1)
+    G.add_node("S2",duration = 1, resource = 0.000001, task_num = 1)
+    G.add_node("S3",duration = 1, resource = 0.000001, task_num = 1)
+    G.add_node("S4",duration = 2, resource = 0.1, task_num = 50)
+    G.add_node("S5",duration = 1, resource = 0.000001, task_num = 1)
+    G.add_node("S6", duration = 10, resource = 0.02, task_num = 1)
+    G.add_node("S7",duration = 0.1, resource = 0.9, task_num = 20)
+    G.add_node("S8",duration = 1, resource = 0.000001, task_num = 1)
+
+    G.add_edge("S1", "S4")
+    G.add_edge("S2", "S4")
+    G.add_edge("S3", "S5")
+    G.add_edge("S4", "S6")
+    G.add_edge("S5", "S6")
+    G.add_edge("S6", "S7")
+    G.add_edge("S6", "S8")
+
+    return G
+
+testg = create_sample_graph()
+# print("Nodes with attributes:", testg.nodes(data=True))
+# print("Edges with attributes:", testg.edges(data=True))
 def convert_to_ints(str_list):
     int_list = []
     for num in str_list:
@@ -40,17 +67,15 @@ for index, row in df.iterrows():
         G.add_node(node_id, start_time=time, end_time=time)
 
     # Add edges from parent
-    if pd.notna(row['parent_collection_id']):
-        G.add_edge(row['parent_collection_id'], node_id)
+    if pd.notna(row['start_after_collection_ids']):
+        G.add_edge(row['start_after_collection_ids'], node_id)
 
     # Add edges from start after collections
-    start_after_ids = row['start_after_collection_ids'].strip('[]').split()
-    start_after_ids = convert_to_ints(start_after_ids)
-    for start_after_id in start_after_ids:
-        G.add_edge(node_id, start_after_id)
+    # start_after_ids = row['start_after_collection_ids'].strip('[]').split()
+    # start_after_ids = convert_to_ints(start_after_ids)
+    # for start_after_id in start_after_ids:
+    #     G.add_edge(node_id, start_after_id)
 
-
-######################## CPLen ########################
 # calculate the t_duration of each node
 for node in G.nodes:
     if 'end_time' in G.nodes[node] and 'start_time' in G.nodes[node]:
@@ -61,150 +86,195 @@ for node in G.nodes:
         print(f"Warning: Node {node} does not have complete time attributes.")
         G.nodes[node]['duration'] = -1  # this is exception
 
-max_duration = 0
-longest_path = []
 
-# Traverse all nodes
-for source in G.nodes:
-    # Check single node path (self-loop case)
-    current_duration = G.nodes[source]['duration']
-    if current_duration > max_duration:
-        max_duration = current_duration
-        longest_path = [source]
+def calc_critical_path(graph):
+    max_duration = 0
+    longest_path = []
 
-    # Check paths between distinct source and target nodes
-    for target in G.nodes:
-        if source != target and nx.has_path(G, source, target):
-            for path in nx.all_simple_paths(G, source=source, target=target):
-                current_duration = sum(G.nodes[node]['duration'] for node in path)
-                if current_duration > max_duration:
-                    max_duration = current_duration
-                    longest_path = path
+    for source in graph.nodes:
+        # Check single node path (self-loop case)
+        if 'duration' in graph.nodes[source]:  # Ensure the 'duration' attribute exists
+            current_duration = graph.nodes[source]['duration']
+            if current_duration > max_duration:
+                max_duration = current_duration
+                longest_path = [source]
 
-print("Longest path:", longest_path)
-print("Duration of longest path(CPLen):", max_duration)
-######################## End of CPLen ########################
+        # Check paths between distinct source and target nodes
+        for target in graph.nodes:
+            if source != target and nx.has_path(graph, source, target):
+                for path in nx.all_simple_paths(graph, source=source, target=target):
+                    current_duration = sum(graph.nodes[node]['duration'] for node in path)
+                    if current_duration > max_duration:
+                        max_duration = current_duration
+                        longest_path = path
 
+    return longest_path, max_duration
 
-######################## TWork ###############################
-# read csv file
-file_path = 'instance_usage_SAMPLE.csv'
-df = pd.read_csv(file_path)
-# print(df.head(10))
-for index, row in df.iterrows():
-    node_id = row['collection_id']
-    # Update nodes with time information safely
-    if node_id in G:
-        G.nodes[node_id]['cpu_usage'] = row['avg_cpu_usage']
-        G.nodes[node_id]['memory_usage'] = row['avg_memory_usage']
-        # print(G.nodes[node_id])
+def calc_twork(graph):
+    # print(graph.nodes)
+    twork = 0
+    for node in graph.nodes:
+        twork += graph.nodes[node]['resource'] * graph.nodes[node]['duration'] * graph.nodes[node]['task_num']
 
-TWork_CPU = 0
-TWork_MEM = 0
-for node in G.nodes:
-    TWork_CPU += G.nodes[node]['cpu_usage']*G.nodes[node]['duration']
-    TWork_MEM += G.nodes[node]['memory_usage']*G.nodes[node]['duration']
+    return twork
 
 
+def cut_dags(G):
+    """
+    Function to divide a DAG into smaller subgraphs based on stages.
 
-TWork = max(TWork_CPU, TWork_MEM)
-print("TWork:", f"{TWork_MEM:.0f}")
-######################## End of TWork ###############################
-print(G.nodes[377806921258]['duration'])
+    Args:
+        G (nx.DiGraph): Input directed acyclic graph (DAG).
 
-# Graph Visualization
-# pos = nx.spring_layout(G)
-# plt.figure(figsize=(12, 12))
-# nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=500, font_size=4, alpha=0.7)
-# plt.title('Graph Visualization')
-# plt.show()
+    Returns:
+        list: Ordered list of smaller DAGs.
+    """
+    # Initialize the result list and processing queue
+    L = [G]  # Start with the original graph
+    to_process = deque([G])  # Queue for processing
 
+    while to_process:
+        G_prime = to_process.pop()  # Pop a graph from the queue
 
+        cut_found = False  # Flag to track if a valid cut is made
+        for stage in list(G_prime.nodes):  # Iterate through all nodes (stages)
+            # Calculate U(s, G'): unordered neighbors
+            unordered_neighbors = get_unordered_neighbors(G_prime, stage)
 
+            # If no unordered neighbors
+            if not unordered_neighbors:
+                # Cut at the current stage
+                G1, G2 = cut_graph(G_prime, stage)
 
-# 假设df是从CSV读取的包含collection_id, time等信息的DataFrame
+                # Ensure the cut produces two non-empty subgraphs
+                if len(G1.nodes) > 0 and len(G2.nodes) > 0:
+                    # Replace G' with G1 and G2 in L
+                    L.remove(G_prime)
+                    L.append(G1)
+                    L.append(G2)
 
-# 定义计算CPLen（Critical Path Length）的函数
-def calculate_cplen(graph, path):
-    cplen = 0
-    for node in path:
-        cplen += graph.nodes[node]['duration']
-    return cplen
+                    # Add the new subgraphs to the processing queue
+                    to_process.append(G1)
+                    to_process.append(G2)
 
+                    cut_found = True  # Mark that a valid cut was found
+                    break  # Process the next graph
 
-# 定义计算TWork的函数
-def calculate_twork(graph, path):
-    TWork_CPU = 0
-    TWork_MEM = 0
-    for node in path:
-        TWork_CPU += graph.nodes[node]['cpu_usage'] * graph.nodes[node]['duration']
-        TWork_MEM += graph.nodes[node]['memory_usage'] * graph.nodes[node]['duration']
-    return max(TWork_CPU, TWork_MEM)
+        # If no valid cut was found, skip further processing
+        if not cut_found:
+            continue
 
-# 获取所有从起始节点到终止节点的路径
-# all_paths = list(nx.all_simple_paths(G, source='start_node', target='end_node'))
-
-
-
-# 定义计算 ModCP 的函数
-def calculate_modcp(graph, path):
-    modcp = 0
-    stage_cplen_twork_max = []  # 用于存储每个stage的max(CPLen, TWork)
-    min_durations = []  # 用于存储每个阶段的最小任务持续时间
-
-    # 计算每个阶段的最大 CPLen 或 TWork
-    for node in path:
-        cplen = calculate_cplen(graph, [node])
-        twork = calculate_twork(graph, [node])
-        stage_cplen_twork_max.append(max(cplen, twork))
-
-    # 计算每个阶段的最小任务持续时间
-    for node in path:
-        duration = graph.nodes[node]['duration']
-        min_durations.append(duration)
-
-    # 取当前阶段的max(CPLen, TWork) 加上其他阶段的最小持续时间
-    for i, stage_max in enumerate(stage_cplen_twork_max):
-        modcp = max(modcp, stage_max + sum(min_durations[:i] + min_durations[i + 1:]))
-
-    return modcp
+    return L
 
 
-# 计算所有路径的 ModCP 值
-# 计算所有路径的 ModCP 值，包括单一节点的情况
+def get_unordered_neighbors(G, stage):
+    """
+    Get unordered neighbors U(s, G) for a given stage in the graph.
 
-path_modcp_values = []
-for source in G.nodes:
-    for target in G.nodes:
-        # 处理单一节点的情况，即 source == target
-        if source == target:
-            modcp_value = calculate_modcp(G, [source])  # 单节点路径
-            path_modcp_values.append(([source], modcp_value))
-        # 处理 source != target 的情况
-        elif nx.has_path(G, source, target):
-            for path in nx.all_simple_paths(G, source=source, target=target):
-                modcp_value = calculate_modcp(G, path)
-                path_modcp_values.append((path, modcp_value))
+    Args:
+        G (nx.DiGraph): Input graph.
+        stage: Node (stage) in the graph.
+
+    Returns:
+        set: Unordered neighbors of the node.
+    """
+    # Calculate U(s, G) = V - A(s, G) - D(s, G) - {s}
+    all_stages = set(G.nodes)
+    ancestors = nx.ancestors(G, stage)
+    descendants = nx.descendants(G, stage)
+    return all_stages - ancestors - descendants - {stage}
 
 
-# 输出结果
-# for path, modcp_value in path_modcp_values:
-#     print(f"Path: {path}, ModCP: {modcp_value}")
+def cut_graph(G, stage):
+    """
+    Cut the graph at a given stage into two subgraphs.
 
-partitions = [list(G.nodes)]  # 这里假设整个图作为一个单一的分区。如果有多个子图，你可以替换此列表
+    Args:
+        G (nx.DiGraph): Input graph.
+        stage: Node (stage) at which to cut.
 
-# 计算 NewLB
-newlb = 0
-for partition in partitions:
-    cplen = calculate_cplen(G, partition)
-    twork = calculate_twork(G, partition)
-    # modcp = calculate_modcp(G, partition)
-    # print(modcp)
-    modcp = max(value for path, value in path_modcp_values)
-    print(modcp)
+    Returns:
+        tuple: Two subgraphs (G1, G2) after the cut.
+    """
+    # G1: Subgraph induced by ancestors and the current stage
+    ancestors = nx.ancestors(G, stage)
+    G1_nodes = ancestors
+    G1 = G.subgraph(G1_nodes).copy()
 
-    # 取 CPLen, TWork, ModCP 的最大值
-    max_value = max(cplen, twork, modcp)
-    # newlb += max_value
+    # G2: Subgraph induced by descendants
+    descendants = nx.descendants(G, stage)
+    G2_nodes = descendants.union({stage})
+    G2 = G.subgraph(G2_nodes).copy()
 
-print(f"NewLB: {max_value}")
+    return G1, G2
+
+def calc_modcp(graph):
+    """
+    Calculate the Modified Critical Path (ModCP) for a given graph.
+
+    Args:
+        graph (nx.DiGraph): The input DAG.
+
+    Returns:
+        float: The ModCP value.
+    """
+    max_modcp = 0
+
+    # Iterate over all simple paths in the graph
+    for source in graph.nodes:
+        for target in graph.nodes:
+            if source != target and nx.has_path(graph, source, target):
+                for path in nx.all_simple_paths(graph, source=source, target=target):
+                    # Initialize variables for this path
+                    max_stage_value = 0
+
+                    # print(f"total work for {path}: {total_twork}")
+                    for stage in path:
+                        # Compute CPLen_s (Critical Path Length starting at stage)
+                        subgraph = graph.subgraph(path[path.index(stage):])  # Subgraph from current stage onward
+                        _, cplen_s = calc_critical_path(graph.subgraph(stage))
+                        stage_twork = calc_twork(graph.subgraph(stage))
+                        print(f"cplength for stage:{stage} is {cplen_s}")
+                        # Compute min_t_duration for tasks not in the current stage
+                        remaining_nodes = set(path) - {stage}
+                        min_t_duration = sum(graph.nodes[node]['duration'] for node in remaining_nodes if 'duration' in graph.nodes[node])
+                        print(f"min_t_duration: {min_t_duration} despite stage: {stage}")
+                        # Compute the stage value
+                        stage_value = max(stage_twork, cplen_s) + min_t_duration
+                        print(f"stage_value: {stage_value}")
+                        max_stage_value = max(max_stage_value, stage_value)
+
+                    # Update max_modcp for this path
+                    max_modcp = max(max_modcp, max_stage_value)
+
+    return max_modcp
+
+
+G1, G2 = cut_dags(create_sample_graph())
+print(calc_twork(G1))
+print(calc_twork(G2))
+
+
+
+def cal_newlb(graph):
+    G1, G2 = cut_dags(graph)
+    print(G1.nodes)
+    print(G2.nodes)
+    _, G1_CP = calc_critical_path(G1)
+    print(G1_CP)
+    _, G2_CP = calc_critical_path(G2)
+    print(G2_CP)
+    G1_TW = calc_twork(G1)
+    print(G1_TW)
+    G2_TW = calc_twork(G2)
+    print(G2_TW)
+    G1_ModCP = calc_modcp(G1)
+    print(G1_ModCP)
+    G2_ModCP = calc_modcp(G2)
+    print(G2_ModCP)
+    new_lb = max(G1_CP, G1_TW, G1_ModCP) + max(G2_CP, G2_TW, G2_ModCP)
+
+    return new_lb
+
+
+print(cal_newlb(create_sample_graph()))
