@@ -208,31 +208,32 @@ def calc_newlb(graph):
     :return: NewLB value.
     """
     try:
-        # 分割图为两个子图
+        # cut into 2 subgraphs
         G1, G2 = cut_dags(graph)
 
-        # 计算 G1 和 G2 的关键路径长度
+        # cplen
         _, G1_CP = calc_critical_path(G1)
         _, G2_CP = calc_critical_path(G2)
 
-        # 计算 TWork 值
+        # TWork
         G1_TW = calc_twork(G1)
         G2_TW = calc_twork(G2)
 
-        # 计算 ModCP 值
+        # ModCP
         G1_ModCP = calc_modcp(G1)
         G2_ModCP = calc_modcp(G2)
 
-        # 计算 NewLB
+        # NewLB
         new_lb = max(G1_CP, G1_TW, G1_ModCP) + max(G2_CP, G2_TW, G2_ModCP)
 
         return new_lb
 
     except ValueError as e:
-        # 捕获解包错误并打印提示信息
+        # if we cannot cut this graph, then return -1
         return -1
 
 
+# run this for test graph in GRAPHENE paper
 graph = create_sample_graph()
 NewLB = calc_newlb(graph)
 print(NewLB)
