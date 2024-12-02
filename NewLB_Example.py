@@ -204,19 +204,33 @@ def calc_newlb(graph):
     """
     Calculate the NewLB for the graph.
     Formula: NewLB = SUM(max(CPLen_s, TWork_s, ModCP_s)+ SUM(duration_expect_s))
-    :param graph:
-    :return:
+    :param graph: The input graph to calculate NewLB.
+    :return: NewLB value.
     """
-    G1, G2 = cut_dags(graph)
-    _, G1_CP = calc_critical_path(G1)
-    _, G2_CP = calc_critical_path(G2)
-    G1_TW = calc_twork(G1)
-    G2_TW = calc_twork(G2)
-    G1_ModCP = calc_modcp(G1)
-    G2_ModCP = calc_modcp(G2)
-    new_lb = max(G1_CP, G1_TW, G1_ModCP) + max(G2_CP, G2_TW, G2_ModCP)
+    try:
+        # 分割图为两个子图
+        G1, G2 = cut_dags(graph)
 
-    return new_lb
+        # 计算 G1 和 G2 的关键路径长度
+        _, G1_CP = calc_critical_path(G1)
+        _, G2_CP = calc_critical_path(G2)
+
+        # 计算 TWork 值
+        G1_TW = calc_twork(G1)
+        G2_TW = calc_twork(G2)
+
+        # 计算 ModCP 值
+        G1_ModCP = calc_modcp(G1)
+        G2_ModCP = calc_modcp(G2)
+
+        # 计算 NewLB
+        new_lb = max(G1_CP, G1_TW, G1_ModCP) + max(G2_CP, G2_TW, G2_ModCP)
+
+        return new_lb
+
+    except ValueError as e:
+        # 捕获解包错误并打印提示信息
+        return -1
 
 
 graph = create_sample_graph()
