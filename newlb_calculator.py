@@ -234,7 +234,7 @@ def calc_newlb(graph):
 
 
 # run this for test graph in GRAPHENE paper
-graph = create_sample_graph()
-NewLB = calc_newlb(graph)
-print(NewLB)
+# graph = create_sample_graph()
+# NewLB = calc_newlb(graph)
+# print(NewLB)
 

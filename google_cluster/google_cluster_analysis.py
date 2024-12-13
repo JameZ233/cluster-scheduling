@@ -3,7 +3,7 @@ import networkx as nx
 import ast
 import matplotlib.pyplot as plt
 
-from NewLB_Example import calc_newlb, calc_critical_path, calc_twork, cut_dags, graph
+from newlb_calculator import calc_newlb, calc_critical_path, calc_twork, cut_dags, graph
 
 file_path = 'SAMPLE_combination.csv'
 df = pd.read_csv(file_path)
