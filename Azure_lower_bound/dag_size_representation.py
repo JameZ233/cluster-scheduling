@@ -27,7 +27,7 @@ plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.savefig("task_size_distribution_log.png")
 plt.show()
 
-# Save the size frequency to a JSON file for additional analysis if needed
+
 with open("size_frequency.json", "w") as f:
     json.dump(size_frequency, f, indent=4)
 

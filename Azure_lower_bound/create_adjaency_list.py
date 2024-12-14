@@ -36,9 +36,9 @@ def create_adjacency_lists_by_tenant(db_path, table_name):
     return {tenant: dict(adj_list) for tenant, adj_list in tenant_adjacency_lists.items()}
 
 
-# Example usage
-db_path = "/Users/yuelan/Desktop/packing_trace_zone_a_v1.sqlite"  # Replace with the actual path to your database
-table_name = "integrated_with_dependencies_full"  # Replace with your table name
+
+db_path = "/Users/yuelan/Desktop/packing_trace_zone_a_v1.sqlite"
+table_name = "integrated_with_dependencies_full"
 
 # Create adjacency lists grouped by tenant and store them in a local variable
 tenant_adj_lists = create_adjacency_lists_by_tenant(db_path, table_name)

@@ -22,9 +22,9 @@ def get_all_tenant_ids(db_path, table_name):
     return tenant_ids
 
 
-# Example usage
-db_path = "/Users/yuelan/Desktop/packing_trace_zone_a_v1.sqlite"  # Replace with the actual database path
-table_name = "integrated_with_dependencies_full"  # Replace with your table name
+
+db_path = "/Users/yuelan/Desktop/packing_trace_zone_a_v1.sqlite"
+table_name = "integrated_with_dependencies_full"
 
 tenant_ids = get_all_tenant_ids(db_path, table_name)
 with open("tenant_ids.txt", "w") as file:

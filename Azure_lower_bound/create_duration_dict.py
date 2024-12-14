@@ -40,11 +40,11 @@ def create_task_duration_dicts_by_tenant(db_path, table_name):
     return {tenant: dict(task_durations) for tenant, task_durations in tenant_task_durations.items()}
 
 
-# Example usage
-db_path = "/Users/yuelan/Desktop/packing_trace_zone_a_v1.sqlite"  # Replace with the actual path to your database
-table_name = "integrated_with_dependencies_full"  # Replace with your table name
 
-# Create separate dictionaries for each tenant
+db_path = "/Users/yuelan/Desktop/packing_trace_zone_a_v1.sqlite"
+table_name = "integrated_with_dependencies_full"
+
+
 tenant_task_durations = create_task_duration_dicts_by_tenant(db_path, table_name)
 
 

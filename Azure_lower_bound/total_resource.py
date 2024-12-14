@@ -4,15 +4,7 @@ def get_aggregate_resources(db_path, table_name):
     """
     Calculate the aggregate values of core, memory, ssd, and nic from the vmType table.
 
-    Parameters:
-        db_path: str
-            Path to the SQLite database.
-        table_name: str
-            Name of the table containing resource columns (core, memory, ssd, nic).
 
-    Returns:
-        dict:
-            A dictionary with resources (core, memory, ssd, nic) as keys and their aggregates as values.
     """
     # Connect to the database
     conn = sqlite3.connect(db_path)
@@ -46,9 +38,9 @@ def get_aggregate_resources(db_path, table_name):
     return resources_aggregate
 
 
-# Example usage
-db_path = "/Users/yuelan/Desktop/packing_trace_zone_a_v1.sqlite"  # Replace with the actual database path
-table_name = "vmType"  # Replace with your table name
+
+db_path = "/Users/yuelan/Desktop/packing_trace_zone_a_v1.sqlite"
+table_name = "vmType"
 
 resources_aggregate = get_aggregate_resources(db_path, table_name)
 print(f"Aggregate Resources: {resources_aggregate}")

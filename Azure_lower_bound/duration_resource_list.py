@@ -41,7 +41,6 @@ def create_task_resource_lists_by_tenant(db_path, table_name):
         nic = nic or 0
 
         try:
-            # Convert timestamps to datetime objects and calculate duration
             start = datetime.fromtimestamp(starttime) if starttime else None
             end = datetime.fromtimestamp(endtime) if endtime else None
             duration = (end - start).total_seconds() if start and end else 0
@@ -71,12 +70,12 @@ def create_task_resource_lists_by_tenant(db_path, table_name):
 
 
 # Example usage
-db_path = "/Users/yuelan/Desktop/packing_trace_zone_a_v1.sqlite"  # Replace with the actual path to your database
-table_name = "integrated_with_dependencies_full"  # Replace with your table name
+db_path = "/Users/yuelan/Desktop/packing_trace_zone_a_v1.sqlite"
+table_name = "integrated_with_dependencies_full"
 
 # Create separate task resource lists for each tenant
 tenant_task_duration_resources = create_task_resource_lists_by_tenant(db_path, table_name)
 
-# Save precomputed adjacency lists to a file
+
 with open("duration_resource_dict.json", "w") as f:
     json.dump(tenant_task_duration_resources, f)

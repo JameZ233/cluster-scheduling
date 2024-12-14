@@ -17,6 +17,6 @@ task_counts = {}
 for tenant_id, dag in adjacency_lists.items():
     task_counts[tenant_id] = count_tasks_in_dag(dag)
 
-# Save the results to a JSON file
+
 with open("task_counts.json", "w") as f:
     json.dump(task_counts, f)
