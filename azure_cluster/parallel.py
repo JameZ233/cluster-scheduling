@@ -1,5 +1,6 @@
 from collections import deque
 import json
+import ijson
 from multiprocessing import Pool
 
 
@@ -27,12 +28,13 @@ def topological_sort(graph):
 # Calculate Critical Path Length (CPLen)
 def cplen(graph, durations):
     topo_order = topological_sort(graph)
-    cplen = {node: 0 for node in graph}
+    cplen_values = {node: 0 for node in graph}
 
+    # Compute the longest path length ending at each node
     for node in reversed(topo_order):
-        cplen[node] = durations[node] + max((cplen[child] for child in graph[node]), default=0)
+        cplen_values[node] = durations[node] + max((cplen_values[child] for child in graph[node]), default=0)
 
-    return cplen
+    return cplen_values
 
 
 # Calculate TWork for a DAG
@@ -59,7 +61,13 @@ def ModCP(graph, stages, durations, capacities, duration_resources=None):
         ] if duration_resources else []
 
         twork = calculate_twork(stage_tasks, capacities) if stage_tasks else 0
-        max_twork_cplen = max(twork, cplen_dict.get(stage, twork))
+
+        if tasks:
+            stage_cplen = max(cplen_dict[task] for task in tasks if task in cplen_dict)
+        else:
+            stage_cplen = 0
+
+        max_twork_cplen = max(twork, stage_cplen)
         min_durations_sum = sum(
             min(durations[task] for task in other_tasks if task in durations)
             for other_stage, other_tasks in stages.items() if other_stage != stage
@@ -69,9 +77,11 @@ def ModCP(graph, stages, durations, capacities, duration_resources=None):
 
     return modcp
 
-
 # Construct stages from DAG
+
 def construct_stages(graph):
+    # Ensure all neighbors are present as keys in the graph.
+    # Now proceed with the original logic
     in_degree = {node: 0 for node in graph}
     for node, neighbors in graph.items():
         for neighbor in neighbors:
@@ -100,10 +110,24 @@ def construct_stages(graph):
 def process_dag(data):
     dag_id, graph, duration, resource_duration, total_resource = data
 
+    all_neighbors = set()
+    for node, neighbors in graph.items():
+        for neighbor in neighbors:
+            all_neighbors.add(neighbor)
+    for node in all_neighbors:
+        if node not in graph:
+            graph[node] = []  # Pad the graph with an empty adjacency list
+
+    # 2. Pad durations for missing nodes
+    for node in graph:
+        if node not in duration:
+            duration[node] = 0  # Assign a default duration if missing
+
     stages = construct_stages(graph)
-    cplen_value = cplen(graph, duration)
+    cplen_values = cplen(graph, duration)
+    cplen_value = max(cplen_values.values())
     twork_value = calculate_twork(resource_duration, total_resource)
-    modcp_value = ModCP(graph, stages, duration, total_resource, duration_resources=resource_duration)
+    modcp_value = ModCP(graph, stages, duration, total_resource, resource_duration)
     lower_bound = max(cplen_value, twork_value, modcp_value)
 
     return {
@@ -117,9 +141,18 @@ def process_dag(data):
 
 # Main Function
 def main():
-    # Load data from JSON files
-    with open('adjacency_lists.json', 'r') as f:
-        adjacency_lists = json.load(f)
+
+
+    adjacency_lists = {}
+
+    try:
+        with open('adjacency_lists.json', 'r') as f:
+            for key, value in ijson.kvitems(f, ""):  # Incrementally load key-value pairs
+                adjacency_lists[key] = value  # Append key-value pairs to the dictionary
+    except Exception as e:
+        print(f"Error while loading adjacency lists: {e}")
+
+
     with open('duration_dict.json', 'r') as f:
         durations = json.load(f)
     with open('duration_resource_dict.json', 'r') as f:
@@ -130,6 +163,8 @@ def main():
         resource_sum = json.load(f)
 
     # Prepare tasks for processing
+
+
     tasks = [
         (
             tenant,
